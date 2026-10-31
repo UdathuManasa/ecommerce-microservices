@@ -4,6 +4,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.api.auth import router as auth_router
+from app.api.user import router as users_router
 
 app = FastAPI(
     title="E-Commerce Auth Service",
@@ -11,6 +13,9 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Register authentication endpoints
+app.include_router(auth_router)
+app.include_router(users_router)
 
 @app.get("/")
 def root():

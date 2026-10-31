@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     DB_NAME: str = "ecommerce_auth"
     DB_USER: str = "ecommerce_user"
     DB_PASSWORD: str = "Manasa123"
+    JWT_ISSUER: str = "ecommerce-auth-service"
+    JWT_AUDIENCE: str = "ecommerce-platform"
+
+    COOKIE_SECURE: bool = False
 
     SECRET_KEY: str = "fallback-secret-key"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
