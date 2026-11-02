@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     DB_NAME: str = "ecommerce_products"
     DB_USER: str = "products_user"
     DB_PASSWORD: str
+    AUTH_SERVICE_URL: str = "http://localhost:8000"
 
     SECRET_KEY: str
     JWT_ISSUER: str = "ecommerce-auth-service"

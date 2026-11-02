@@ -2,6 +2,9 @@ from fastapi import FastAPI, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.core.redis_client import check_redis_connection
+
+
 from app.db.database import get_db
 from app.api.products import router as products_router
 
@@ -26,3 +29,15 @@ def root():
 def database_health(db: Session = Depends(get_db)):
     db.execute(text("SELECT 1"))
     return {"database": "connected"}
+
+
+@app.get("/health/redis")
+def redis_health():
+    if not check_redis_connection():
+        return {
+            "redis": "disconnected"
+        }
+
+    return {
+        "redis": "connected"
+    }
