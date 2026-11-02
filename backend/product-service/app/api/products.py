@@ -52,22 +52,6 @@ def create(
         raise HTTPException(status_code=409, detail=str(exc))
 
 
-@router.get("/{product_id}", response_model=ProductResponse)
-def read(
-    product_id: str,
-    db: Session = Depends(get_db)
-):
-    try:
-        product = get_product(db, product_id)
-
-        if not product.is_active:
-            raise ProductNotFoundError("Product not found")
-
-        return product
-
-    except ProductNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
-
 
 @router.patch("/{product_id}", response_model=ProductResponse)
 def update(
