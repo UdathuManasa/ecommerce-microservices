@@ -16,6 +16,17 @@ class InsufficientStockError(ReservationError):
 class ReservationConflictError(ReservationError):
     pass
 
+class ReservationNotFoundError(ReservationError):
+    pass
+
+
+class InvalidReservationStateError(ReservationError):
+    pass
+
+
+class InventoryConsistencyError(ReservationError):
+    pass
+
 
 def reserve_stock(
     db: Session,
@@ -93,6 +104,73 @@ def reserve_stock(
         raise ReservationConflictError(
             "Could not create reservation because of a conflict"
         )
+
+    except Exception:
+        db.rollback()
+        raise
+
+def transition_reservation(
+    db: Session,
+    reservation_id: str,
+    target_status: str,
+):
+    if target_status not in ("COMMITTED", "RELEASED"):
+        raise ValueError("Invalid target status")
+
+    try:
+        # Lock the reservation row so concurrent commit/release
+        # requests for this reservation cannot process it together.
+        reservation = db.scalar(
+            select(InventoryReservation)
+            .where(InventoryReservation.id == reservation_id)
+            .with_for_update()
+        )
+
+        if reservation is None:
+            raise ReservationNotFoundError("Reservation not found")
+
+        # Repeated identical operation: return without changing stock.
+        if reservation.status == target_status:
+            return reservation
+
+        if reservation.status != "PENDING":
+            raise InvalidReservationStateError(
+                f"Cannot change {reservation.status} reservation "
+                f"to {target_status}"
+            )
+
+        # Lock the corresponding inventory row as well.
+        inventory = db.scalar(
+            select(Inventory)
+            .where(Inventory.product_id == reservation.product_id)
+            .with_for_update()
+        )
+
+        if inventory is None:
+            raise InventoryConsistencyError(
+                "Inventory record not found for reservation"
+            )
+
+        if inventory.reserved_quantity < reservation.quantity:
+            raise InventoryConsistencyError(
+                "Reserved quantity is inconsistent"
+            )
+
+        if target_status == "COMMITTED":
+            # Payment succeeded. Stock is sold.
+            inventory.reserved_quantity -= reservation.quantity
+
+        else:
+            # Payment failed/cancelled. Return stock.
+            inventory.reserved_quantity -= reservation.quantity
+            inventory.available_quantity += reservation.quantity
+
+        reservation.status = target_status
+
+        db.commit()
+        db.refresh(reservation)
+
+        return reservation
 
     except Exception:
         db.rollback()
